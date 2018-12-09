@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
-	"encoding/csv"
-	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"time"
+
+	"github.com/loveuse/gophercises/exercise1/quiz"
 )
 
 func main() {
@@ -23,17 +22,20 @@ func main() {
 	}
 	defer filePtr.Close()
 
-	questions, answers, err := loadQuiz(filePtr)
+	store, err := quiz.NewStore(filePtr)
+	if err != nil {
+		log.Fatalf("could not load the questions/answer file: %v", err)
+	}
 
-	quiz := &Quiz{Questions: questions, answers: answers}
+	quiz := quiz.New(store)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, *timer)
 	defer cancel()
 
-	ch := make(chan struct{})
+	quizNotifyChan := make(chan struct{})
 	go func() {
-		err = quiz.StartQuiz(ctx, ch)
+		err = quiz.StartQuiz(ctx, quizNotifyChan)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -42,35 +44,8 @@ func main() {
 	select {
 	case <-ctx.Done():
 		fmt.Println("\nTime Expired.")
-	case <-ch:
+	case <-quizNotifyChan:
+		// user has finished the quiz
 	}
-	fmt.Printf("Number of questions %d. Correct answers: %d\n", len(quiz.Questions), quiz.NumCorrectAnswers)
-}
-
-// loadQuiz reads from the CSV and returns the questions and answers slices
-func loadQuiz(filePtr *os.File) ([]string, []string, error) {
-	quizReader := csv.NewReader(filePtr)
-	questions := []string{}
-	answers := []string{}
-
-	for {
-		row, err := quizReader.Read()
-		if err == io.EOF {
-			break
-		}
-		// just logging a row not readable
-		if err != nil {
-			log.Printf("could not read a row: %v", err)
-			continue
-		}
-
-		questions = append(questions, row[0])
-		answers = append(answers, row[1])
-	}
-
-	if len(questions) < 1 || len(answers) < 1 {
-		return nil, nil, errors.New("could not read any question")
-	}
-
-	return questions, answers, nil
+	fmt.Printf("Number of questions %d. Correct answers: %d\n", len(quiz.Store.Questions), quiz.NumCorrectAnswers)
 }
