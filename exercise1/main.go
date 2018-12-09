@@ -14,7 +14,7 @@ import (
 
 func main() {
 	quizPath := flag.String("csv", "problems.csv", "quiz CSV file with format: question,answer")
-	timer := flag.Duration("t", 3*time.Second, "timer for complete the quiz, format: 1s, 1m, 1h")
+	timer := flag.Duration("t", 30*time.Second, "timer for complete the quiz, format: 1s, 1m, 1h")
 	flag.Parse()
 
 	filePtr, err := os.Open(*quizPath)
