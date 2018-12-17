@@ -2,86 +2,57 @@ package quiz
 
 import (
 	"context"
-	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 )
 
-type Loader interface {
-	load(r io.Reader) error
+// Extractor interface that models teh actvity to extract/retrieve data from a reader.
+type Extractor interface {
+	Extract(r io.Reader) (Questions, Answers, error)
 }
 
-type Store struct {
-	Questions []string
-	answers   []string
+// Runnable interface models an activity that can be executed:
+// Run takes as input:
+// - context: e.g. used for cancelling the activity
+// - chan: signals when the activity ends
+type Runnable interface {
+	Run(context.Context, chan struct{}) error
 }
 
-func NewStore(r io.Reader) (*Store, error) {
-	store := &Store{Questions: []string{},
-		answers: []string{},
-	}
-	if err := store.load(r); err != nil {
-		return nil, err
-	}
-	return store, nil
-}
+// Questions defines questions as slice of strings
+type Questions []string
 
-// load reads from a CSV file with format question,answer and map those records to
-// questions and answers of the Store
-func (s *Store) load(r io.Reader) error {
-	quizReader := csv.NewReader(r)
-	s.Questions = []string{}
-	s.answers = []string{}
+// Answers defines answers as slice of strings
+type Answers []string
 
-	for {
-		row, err := quizReader.Read()
-		if err == io.EOF {
-			break
-		}
-		// just logging a row not readable
-		if err != nil {
-			log.Printf("could not read a row: %v", err)
-			continue
-		}
-
-		s.Questions = append(s.Questions, row[0])
-		s.answers = append(s.answers, row[1])
-	}
-
-	if len(s.Questions) < 1 || len(s.answers) < 1 {
-		return errors.New("could not read any question")
-	}
-
-	return nil
-}
-
-// Quiz struct that contains the questions, the private answers and the number
-// of corrected answers
+// Quiz holds questions, answers and the number of corrected answers
 type Quiz struct {
-	Store             *Store
+	Questions         Questions
+	Answers           Answers
 	NumCorrectAnswers int
 }
 
-func New(store *Store) *Quiz {
-	return &Quiz{
-		Store: store,
+// New creates and returns a new quiz from questions and answers
+func New(questions Questions, answers Answers) *Quiz {
+	quiz := &Quiz{
+		Questions: questions,
+		Answers:   answers,
 	}
+	return quiz
 }
 
-// StartQuiz scans the input answer for every question and updates
+// Run scans from standard input the answers for every question and updates
 // the number of corrected answers
-func (q *Quiz) StartQuiz(ctx context.Context, ch chan struct{}) error {
+func (q *Quiz) Run(ctx context.Context, ch chan struct{}) error {
 	var answer string
-	for i, question := range q.Store.Questions {
+	for i, question := range q.Questions {
 		fmt.Print(question + ": ")
 		if _, err := fmt.Scanf("%s\n", &answer); err != nil {
 			return fmt.Errorf("could not read the answer for %s: ", question)
 		}
 
-		if answer == strings.TrimSpace(q.Store.answers[i]) {
+		if answer == strings.TrimSpace(q.Answers[i]) {
 			q.NumCorrectAnswers++
 		}
 	}

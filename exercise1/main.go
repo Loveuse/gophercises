@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/loveuse/gophercises/exercise1/quiz"
+	"github.com/loveuse/gophercises/exercise1/quiz/csv"
 )
 
 func main() {
-	quizPath := flag.String("csv", "problems.csv", "quiz CSV file with format: question,answer")
+	quizPath := flag.String("csv", "quiz/csv/problems.csv", "quiz CSV file with format: question,answer")
 	timer := flag.Duration("t", 30*time.Second, "timer for complete the quiz, format: 1s, 1m, 1h")
 	flag.Parse()
 
@@ -22,12 +23,13 @@ func main() {
 	}
 	defer filePtr.Close()
 
-	store, err := quiz.NewStore(filePtr)
+	qaExtractor := fromcsv.Extractor{}
+	questions, answers, err := qaExtractor.Extract(filePtr)
 	if err != nil {
 		log.Fatalf("could not load the questions/answer file: %v", err)
 	}
 
-	quiz := quiz.New(store)
+	quiz := quiz.New(questions, answers)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, *timer)
@@ -35,7 +37,7 @@ func main() {
 
 	quizNotifyChan := make(chan struct{})
 	go func() {
-		err = quiz.StartQuiz(ctx, quizNotifyChan)
+		err = quiz.Run(ctx, quizNotifyChan)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -47,5 +49,6 @@ func main() {
 	case <-quizNotifyChan:
 		// user has finished the quiz
 	}
-	fmt.Printf("Number of questions %d. Correct answers: %d\n", len(quiz.Store.Questions), quiz.NumCorrectAnswers)
+
+	fmt.Printf("Number of questions %d. Correct answers: %d\n", len(quiz.Questions), quiz.NumCorrectAnswers)
 }
