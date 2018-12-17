@@ -6,7 +6,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/loveuse/gophercises/exercise1/quiz"
+	"github.com/Loveuse/gophercises/exercise1/quiz"
 )
 
 // Extractor is a placeholder type that will implement the interface Extractor

@@ -8,8 +8,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/loveuse/gophercises/exercise1/quiz"
-	"github.com/loveuse/gophercises/exercise1/quiz/csv"
+	"github.com/Loveuse/gophercises/exercise1/quiz"
+	"github.com/Loveuse/gophercises/exercise1/quiz/csv"
 )
 
 func main() {
