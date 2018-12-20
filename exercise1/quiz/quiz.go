@@ -3,56 +3,65 @@ package quiz
 import (
 	"context"
 	"fmt"
-	"io"
 	"strings"
+	"time"
 )
 
-// Extractor interface that models teh actvity to extract/retrieve data from a reader.
-type Extractor interface {
-	Extract(r io.Reader) (Questions, Answers, error)
-}
-
-// Runnable interface models an activity that can be executed:
+// Runner interface models an activity that can be executed:
 // Run takes as input:
 // - context: e.g. used for cancelling the activity
 // - chan: signals when the activity ends
-type Runnable interface {
-	Run(context.Context, chan struct{}) error
+// - timer: time available to complete the activity
+type Runner interface {
+	Run(context.Context, chan struct{}, *time.Duration) error
 }
 
-// Questions defines questions as slice of strings
-type Questions []string
+// QA holds a question with its answer
+type QA struct {
+	Question string
+	answer   string
+}
 
-// Answers defines answers as slice of strings
-type Answers []string
+// NewQA constructor for question answer holder
+func NewQA(question, answer string) *QA {
+	qa := &QA{
+		Question: question,
+		answer:   answer,
+	}
+	return qa
+}
+
+// CheckAnswer check whether the answer provided is correct
+func (qa *QA) CheckAnswer(answer string) bool {
+	return strings.TrimSpace(qa.answer) == strings.TrimSpace(answer)
+}
 
 // Quiz holds questions, answers and the number of corrected answers
 type Quiz struct {
-	Questions         Questions
-	Answers           Answers
+	QAs               []QA
 	NumCorrectAnswers int
 }
 
 // New creates and returns a new quiz from questions and answers
-func New(questions Questions, answers Answers) *Quiz {
+func New(questionsAnswers []QA) *Quiz {
 	quiz := &Quiz{
-		Questions: questions,
-		Answers:   answers,
+		QAs: questionsAnswers,
 	}
 	return quiz
 }
 
 // Run scans from standard input the answers for every question and updates
 // the number of corrected answers
-func (q *Quiz) Run(ctx context.Context, ch chan struct{}) error {
+func (q *Quiz) Run(ctx context.Context, ch chan struct{}, timer *time.Duration) error {
 	var answer string
-	for i, question := range q.Questions {
-		fmt.Print(question + ": ")
+	fmt.Println("Time available for the quiz: ", timer)
+	for _, qa := range q.QAs {
+		fmt.Print(qa.Question + ": ")
 		if _, err := fmt.Scanf("%s\n", &answer); err != nil {
-			return fmt.Errorf("could not read the answer for %s: ", question)
+			return fmt.Errorf("could not read the answer for %s: ", qa.Question)
 		}
 
-		if answer == strings.TrimSpace(q.Answers[i]) {
+		if qa.CheckAnswer(answer) {
 			q.NumCorrectAnswers++
 		}
 	}
