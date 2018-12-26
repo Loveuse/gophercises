@@ -28,13 +28,14 @@ func main() {
 	}
 	defer filePtr.Close()
 
-	qaExtractor := csv.Extractor{}
-	QAs, err := qaExtractor.Extract(filePtr)
+	store := &csv.Store{}
+	QAs, err := store.Extract(filePtr)
 	if err != nil {
 		log.Fatalf("could not load the questions/answer file: %v", err)
 	}
+	store.Setup(QAs)
 
-	quiz := quiz.New(QAs)
+	quiz := quiz.New(store)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, *timer)
@@ -55,5 +56,5 @@ func main() {
 		// user has finished the quiz
 	}
 
-	fmt.Printf("Number of questions %d. Correct answers: %d\n", len(quiz.QAs), quiz.NumCorrectAnswers)
+	fmt.Printf("Number of questions %d. Correct answers: %d\n", quiz.Store.QAsLen(), quiz.NumCorrectAnswers)
 }
