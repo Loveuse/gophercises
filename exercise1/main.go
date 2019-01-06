@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/Loveuse/gophercises/exercise1/quiz"
-	"github.com/Loveuse/gophercises/exercise1/quiz/extractor/csv"
+	csv "github.com/Loveuse/gophercises/exercise1/quiz/extract/csv"
+	store "github.com/Loveuse/gophercises/exercise1/quiz/store/qa"
 )
 
 const (
-	csvPath      = "quiz/extractor/csv/problems.csv"
+	csvPath      = "quiz/extract/csv/problems.csv"
 	defaultTimer = 30 * time.Second
 )
 
@@ -28,14 +29,20 @@ func main() {
 	}
 	defer filePtr.Close()
 
-	store := &csv.Store{}
-	QAs, err := store.Extract(filePtr)
+	// extract data from a CSV file
+	extractor := csv.Extractor{}
+	byteQAs, err := extractor.Extract(filePtr)
 	if err != nil {
 		log.Fatalf("could not load the questions/answer file: %v", err)
 	}
-	store.Setup(QAs)
 
-	quiz := quiz.New(store)
+	// create a store to save the QAs
+	qastore := store.New()
+	if err := qastore.Set(byteQAs); err != nil {
+		log.Fatalf("could not save QAs into the store: %v", err)
+	}
+
+	quiz := quiz.New(qastore)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, *timer)
@@ -56,5 +63,10 @@ func main() {
 		// user has finished the quiz
 	}
 
-	fmt.Printf("Number of questions %d. Correct answers: %d\n", quiz.Store.QAsLen(), quiz.NumCorrectAnswers)
+	lenQAs, err := qastore.LenQAs()
+	if err != nil {
+		log.Fatalf("could not retrieve the number of QAs: %v", err)
+	}
+
+	fmt.Printf("Number of questions %d. Correct answers: %d\n", lenQAs, quiz.NumCorrectAnswers)
 }
