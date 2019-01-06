@@ -8,7 +8,9 @@ import (
 )
 
 var (
-	ErrNoData     = errors.New("no questions and answers to retrieve from the store")
+	// ErrNoData thrown when no QA is present into the store
+	ErrNoData = errors.New("no questions and answers to retrieve from the store")
+	// ErrRetrieveQA thrown when QAs could have been retrieved from the store
 	ErrRetrieveQA = errors.New("could not retrieve questions and answers")
 )
 
